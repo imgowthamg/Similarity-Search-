@@ -3,7 +3,8 @@ import faiss
 import numpy as np
 
 # Load a pre-trained sentence transformer model
-model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+# model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # Define functions for encoding texts and calculating similarity
 def encode_texts(texts):
