@@ -46,24 +46,22 @@ def main():
     # Define the Streamlit app title
     st.title("Semantic Textual Similarity (STS)")
 
-    # Check for API requests
-    if 'text1' in st.experimental_get_query_params() and 'text2' in st.experimental_get_query_params():
-        handle_request()
-    else:
-        # User interface for inputting text1 and text2
-        text1 = st.text_area("Enter the first paragraph (text1):")
-        text2 = st.text_area("Enter the second paragraph (text2):")
+    handle_request()
 
-        # Button to calculate similarity
-        if st.button("Calculate Similarity"):
-            if text1.strip() and text2.strip():
-                # Calculate the similarity score
-                similarity_score = calculate_similarity_api(text1, text2)
+    # User interface for inputting text1 and text2
+    text1 = st.text_area("Enter the first paragraph (text1):")
+    text2 = st.text_area("Enter the second paragraph (text2):")
 
-                # Display the similarity score
-                st.write(f"Similarity score: {similarity_score:.4f}")
-            else:
-                st.warning("Please enter both sentences to calculate similarity.")
+    # Button to calculate similarity
+    if st.button("Calculate Similarity"):
+        if text1.strip() and text2.strip():
+            # Calculate the similarity score
+            similarity_score = calculate_similarity_api(text1, text2)
+
+            # Display the similarity score
+            st.write(f"Similarity score: {similarity_score:.4f}")
+        else:
+            st.warning("Please enter both sentences to calculate similarity.")
 
 if __name__ == "__main__":
     main()
