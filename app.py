@@ -3,6 +3,7 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 from flask import request
 import json
+app = Flask(__name__)
 
 # Load the SentenceTransformer model
 model = SentenceTransformer("all-MiniLM-L6-v2")
