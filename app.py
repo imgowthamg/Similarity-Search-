@@ -1,135 +1,67 @@
-# import streamlit as st
-# import pandas as pd
-# from model import encode_texts, calculate_similarity, create_faiss_index
-
-
-# def main():
-#     # Load the dataset
-#     data_path = 'data/DataNeuron_Text_Similarity.csv'
-#     try:
-#         df = pd.read_csv(data_path)
-#     except FileNotFoundError:
-#         st.error(f"File not found: {data_path}")
-#         return
-
-#     # Pre-compute embeddings for text1 and text2 from the dataset
-#     embeddings_text1 = encode_texts(df['text1'].tolist())
-#     embeddings_text2 = encode_texts(df['text2'].tolist())
-
-#     # Create a FAISS index and add embeddings
-#     index = create_faiss_index(embeddings_text1)
-
-#     # Define the Streamlit application
-#     st.title("Semantic Textual Similarity (STS)")
-
-#     # Create input fields for text1 and text2
-#     with st.form(key='similarity_form'):
-#         text1 = st.text_area("Enter the first paragraph (text1):", key='text1')
-#         text2 = st.text_area("Enter the second paragraph (text2):", key='text2')
-#         submitted = st.form_submit_button("Calculate Similarity")
-
-#     if submitted:
-#         # Encode text1 and text2 into embeddings
-#         embedding1 = encode_texts([text1])[0]
-#         embedding2 = encode_texts([text2])[0]
-
-#         # Calculate similarity score
-#         similarity_score = calculate_similarity(embedding1, embedding2)
-
-#         # Display the similarity score
-#         st.success(f"Similarity score: {similarity_score:.4f}")
-
-# if __name__ == "__main__":
-#     main()
 import streamlit as st
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sentence_transformers import SentenceTransformer, util
+from flask import request
+import json
 
-# Custom CSS styles
-st.markdown(
-    f"""
-    <style>
-    body {{
-        background-color: #f5f5f5; /* Light Grey */
-        font-family: Arial, sans-serif;
-    }}
-    .stTextInput input {{
-        background-color: #ffffff; /* White */
-        color: #000000; /* Black */
-        border: 2px solid #cccccc; /* Light Grey */
-        border-radius: 5px;
-        padding: 10px;
-    }}
-    .stTextInput label {{
-        color: #000000; /* Black */
-    }}
-    .stButton button {{
-        background-color: #008CBA; /* Dark Blue */
-        color: white;
-        font-weight: bold;
-        padding: 10px 20px;
-        border-radius: 5px;
-    }}
-    .stSuccess {{
-        background-color: #4CAF50; /* Green */
-        color: white;
-        font-weight: bold;
-        border-radius: 5px;
-        padding: 10px;
-    }}
-    .stWarning {{
-        background-color: #FF5722; /* Orange */
-        color: white;
-        font-weight: bold;
-        border-radius: 5px;
-        padding: 10px;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# Load the SentenceTransformer model
+model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# Application Title
-st.title("Text Similarity Calculator")
+def calculate_similarity_api(text1, text2):
+    """
+    Calculate the similarity score between two texts and return the score.
+    """
+    # Encode the input texts
+    embeddings1 = model.encode(text1, convert_to_tensor=True)
+    embeddings2 = model.encode(text2, convert_to_tensor=True)
 
-# Text Input
-text1 = st.text_area("Enter Text 1:", "", key="text1")
-text2 = st.text_area("Enter Text 2:", "", key="text2")
+    # Compute cosine similarity between the embeddings
+    similarity_score = util.cos_sim(embeddings1, embeddings2)
 
+    # Return the similarity score
+    return similarity_score.item()
 
-# Text Cleaning Function
-def clean_text(text):
-    # Convert to lowercase
-    text = text.lower()
-    # Remove special characters and numbers
-    text = ''.join(e for e in text if e.isalnum() or e.isspace())
-    return text
+def handle_request():
+    # Parse the request body
+    try:
+        request_data = st.experimental_get_query_params()
+        text1 = request_data.get("text1", [None])[0]
+        text2 = request_data.get("text2", [None])[0]
+        
+        if text1 and text2:
+            # Calculate the similarity score
+            similarity_score = calculate_similarity_api(text1, text2)
 
-if st.button("Calculate Similarity"):
-    if not text1 or not text2:
-        st.warning("Please enter both texts.")
+            # Return the similarity score as a JSON response
+            st.json({
+                "similarity score": round(similarity_score, 2)
+            })
+        else:
+            st.error("Both text1 and text2 are required in the request body.")
+    except Exception as e:
+        st.error(f"Error processing request: {e}")
+
+def main():
+    # Define the Streamlit app title
+    st.title("Semantic Textual Similarity (STS)")
+
+    # Check for API requests
+    if 'text1' in st.experimental_get_query_params() and 'text2' in st.experimental_get_query_params():
+        handle_request()
     else:
-        # Clean the text
-        text1 = clean_text(text1)
-        text2 = clean_text(text2)
+        # User interface for inputting text1 and text2
+        text1 = st.text_area("Enter the first paragraph (text1):")
+        text2 = st.text_area("Enter the second paragraph (text2):")
 
-        # Create TF-IDF vectors
-        vectorizer = TfidfVectorizer()
-        tfidf_matrix = vectorizer.fit_transform([text1, text2])
+        # Button to calculate similarity
+        if st.button("Calculate Similarity"):
+            if text1.strip() and text2.strip():
+                # Calculate the similarity score
+                similarity_score = calculate_similarity_api(text1, text2)
 
-        # Calculate Cosine Similarity
-        cosine_sim = cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0]
-
-        # Show Result
-        st.success(f"Similarity between texts: {cosine_sim:.2f}")
-
-# Text Suggestions
-st.subheader("Text Suggestions")
-st.write("Suggestions for using the text similarity calculator:")
-st.write("- Use the text input boxes above to calculate similarity between two texts.")
-st.write("- Click the 'Calculate Similarity' button to clean the texts.")
-st.write("- Examine the results to see the similarity between the texts.")
-
+                # Display the similarity score
+                st.write(f"Similarity score: {similarity_score:.4f}")
+            else:
+                st.warning("Please enter both sentences to calculate similarity.")
 
 if __name__ == "__main__":
-    st.write("To run the application, use the 'Run' option from the left-side menu.")
+    main()
